@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Profile 1": {
+      "commandName": "Executable",
+      "executablePath": "D:\\SteamLibrary\\steamapps\\common\\Sonic Superstars\\SonicSuperstars.exe",
+      "workingDirectory": "D:\\SteamLibrary\\steamapps\\common\\Sonic Superstars"
+    }
+  }
+}
