@@ -5,11 +5,14 @@ using Moon.Scene;
 using Orion;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using static Orion.ActivityPS5;
+using System.Xml;
+using UnityEngine.Playables;
 
 namespace QuickBoot
 {
@@ -24,12 +27,42 @@ namespace QuickBoot
                 stage
             }
 
+            public static int saveRedirection = 0;
             private static bootStyle bootType = bootStyle.titleScreen;
+
+            static private string FindDLLPath()
+            {
+                string injectedDLLPath = null;
+
+                // Get the path of the DLL that injected the code
+                Assembly[] loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+                foreach (Assembly assembly in loadedAssemblies)
+                {
+                    if (assembly.FullName.Contains("QuickBoot"))
+                    {
+                        injectedDLLPath = Path.GetDirectoryName(assembly.Location);
+                        break;
+                    }
+                }
+
+                return injectedDLLPath;
+            }
 
             static public void LoadConfig()
             {
-                string path = Directory.GetCurrentDirectory();
+                string path = FindDLLPath();
 
+                if (path is null)
+                    return;
+
+                string configFile = Path.Combine(path, "config.xml");
+                if (File.Exists(configFile))
+                {
+                    XmlDocument doc = new XmlDocument();
+                    doc.Load(configFile);
+                    bootType = doc.SelectSingleNode("/Configs/boot/@bootType") is XmlAttribute bootTypeAttribute ? (bootStyle)int.Parse(bootTypeAttribute.Value) : bootStyle.titleScreen;
+                    saveRedirection = doc.SelectSingleNode("/Configs/save/@saveRedirection") is XmlAttribute saveRedirectionAttribute ? int.Parse(saveRedirectionAttribute.Value) : 0;
+                }
             }
 
             public static Orion.AppSceneInfo.Scene GetBootStyle()
@@ -47,22 +80,22 @@ namespace QuickBoot
             }
         }
 
-
         [HarmonyPatch(typeof(Orion.BootSceneController))]
         public class BootSceneControllerPatcher
         {
             [HarmonyPrefix]
             [HarmonyPatch("Start")]
-            static bool Prefix() //force the game to swap to title screen scene instead of logo
+            static bool Prefix() //force the game to swap to a different scene instead of logo
             {
 
-                Orion.AppSceneInfo.Scene scene = Orion.AppSceneInfo.Scene.Title;
+                Orion.AppSceneInfo.Scene scene = Config.GetBootStyle();
                 if (scene > Orion.AppSceneInfo.Scene.Title)
                 {
                     var account = Orion.SysAccountManager.Instance;
-                    if (account != null) 
+                    var saveNum = Config.saveRedirection;
+                    if (account != null && saveNum >= 0 && saveNum < 4) 
                     {
-                        var loadSavedata = account.Load(SysSaveManager.SaveDataType.Story, null, 0);
+                        var loadSavedata = account.Load(SysSaveManager.SaveDataType.Story, null, saveNum);
                         account.StartCoroutine(loadSavedata);
                     }
                 }
@@ -74,40 +107,5 @@ namespace QuickBoot
             }
         }
 
-
-
-        [HarmonyPatch(typeof(Orion.SysAccountManager))]
-        public class SysAccountManagerPatcher
-        {
-            [HarmonyPrefix]
-            [HarmonyPatch("Load")]
-            static void Prefix(ref SysSaveManager.SaveDataType type, Action<bool> callback = null, int slotNo = -1)
-            {
-                callback = callback;
-                Console.WriteLine("Load save on save type:" + type.ToString() + " slot num: " + slotNo.ToString());
-            }
-
-
-            [HarmonyPrefix]
-            [HarmonyPatch("SetCurrentSlotNo")]
-            static void Prefix(int slot)
-            {
-
-                Console.WriteLine("current slot is " + slot.ToString());
-            }
-
-        }
-
-        [HarmonyPatch(typeof(Orion.SysSaveManager))]
-        public class SysSaveManagerPatcher
-        {
-            [HarmonyPrefix]
-            [HarmonyPatch("LoadSlot")]
-            static void Prefix(ref SysSaveManager.SaveDataType type, Action<bool> callback = null, int slotNo = -1)
-            {
-                callback = callback;
-                Console.WriteLine("Load SLOT save on save type:" + type.ToString() + " slot num: " + slotNo.ToString());
-            }
-        }
     }
 }
