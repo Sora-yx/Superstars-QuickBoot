@@ -73,7 +73,15 @@ namespace QuickBoot
                         SceneName = stageInfo.StageName,
                         ID = stageInfo.ID,
                     };
+
+                    passingData.UserControlDatas[0].CharaID = Config.GetCharID();
                 }
+            }
+
+            public static void SetWorldMap(ref Orion.GameScenePassing passingData)
+            {
+                passingData = new();
+                passingData.UserControlDatas[0].CharaID = Config.GetCharID();
             }
 
             public static void LoadSaveFile()
@@ -87,7 +95,6 @@ namespace QuickBoot
                 }
             }
         }
-       
 
         public static class Config
         {
@@ -101,6 +108,7 @@ namespace QuickBoot
             public static int saveRedirection = 0;
             private static bootStyle bootType = bootStyle.titleScreen;
             public static int zoneID = 0;
+            public static int charID = 0;
 
             static private string FindDLLPath()
             {
@@ -133,8 +141,9 @@ namespace QuickBoot
                     XmlDocument doc = new XmlDocument();
                     doc.Load(configFile);
                     bootType = doc.SelectSingleNode("/Configs/boot/@bootType") is XmlAttribute bootTypeAttribute ? (bootStyle)int.Parse(bootTypeAttribute.Value) : bootStyle.titleScreen;
+                    zoneID = doc.SelectSingleNode("/Configs/zones/@zoneID") is XmlAttribute zoneAttribute ? int.Parse(zoneAttribute.Value) : 0;
+                    charID = doc.SelectSingleNode("/Configs/characters/@charID") is XmlAttribute charAttribute ? int.Parse(charAttribute.Value) : 0;
                     saveRedirection = doc.SelectSingleNode("/Configs/saves/@saveRedirection") is XmlAttribute saveRedirectionAttribute ? int.Parse(saveRedirectionAttribute.Value) : 0;
-                    zoneID = doc.SelectSingleNode("/Configs/zones/@zoneID") is XmlAttribute zoneAttribute ? int.Parse(zoneAttribute.Value) : 0; 
                 }
             }
 
@@ -151,6 +160,14 @@ namespace QuickBoot
                 }
 
                 return Orion.AppSceneInfo.Scene.Title;
+            }
+
+            public static int GetCharID()
+            {
+                if (charID < 0 || charID >= 5)
+                    charID = 0;
+
+                return charID;
             }
         }
 
@@ -171,7 +188,7 @@ namespace QuickBoot
                 }
 
                 Orion.GameScenePassing passingData = null;
-                string sceneName = sceneType.ToString(); 
+                string sceneName = sceneType.ToString();
 
                 if (sceneType == Orion.AppSceneInfo.Scene.StageSelect && Config.zoneID > 0)
                 {
@@ -179,9 +196,26 @@ namespace QuickBoot
                     sceneName = Orion.GameSceneControllerBase.GameMainSceneName(passingData.SceneName);
                 }
 
+                if (sceneType == Orion.AppSceneInfo.Scene.WorldMap)
+                {
+                    BootHelper.SetWorldMap(ref passingData);
+                }
+
                 DB_TransitionsEachTimeDefine.SceneTransition(color, sceneName, passingData ?? null);
                 return false; //don't call original code
             }
         }
+
+        /*[HarmonyPatch(typeof(DB_TransitionsEachTimeDefine))]
+        public class DB_TransitionsEachTimeDefinePatcher
+        {
+            [HarmonyPrefix]
+            [HarmonyPatch("SceneTransition")]
+            static void toto(DB_TransitionsEachTimeDefine.EAnimType animType, string sceneName, Scene_PassingDataBase passingData = null)
+            {
+                sceneName = sceneName;
+                passingData = passingData;
+            }
+        }*/
     }
 }
