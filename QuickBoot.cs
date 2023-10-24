@@ -22,8 +22,6 @@ namespace QuickBoot
     {
         public static class BootHelper
         {
-            static Il2CppSystem.Action<bool> callback;
-
 
             private static List<string> ZonesList = new()
             {
