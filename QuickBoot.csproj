@@ -27,6 +27,9 @@
     <Reference Include="Il2Cppmscorlib">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sonic Superstars\BepInEx\interop\Il2Cppmscorlib.dll</HintPath>
     </Reference>
+    <Reference Include="UniTask">
+      <HintPath>..\..\..\SteamLibrary\steamapps\common\Sonic Superstars\BepInEx\interop\UniTask.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\SteamLibrary\steamapps\common\Sonic Superstars\BepInEx\interop\UnityEngine.CoreModule.dll</HintPath>
     </Reference>

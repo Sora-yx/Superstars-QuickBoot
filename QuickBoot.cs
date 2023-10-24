@@ -22,6 +22,9 @@ namespace QuickBoot
     {
         public static class BootHelper
         {
+            static Il2CppSystem.Action<bool> callback;
+
+
             private static List<string> ZonesList = new()
             {
                "None",
@@ -88,10 +91,27 @@ namespace QuickBoot
             {
                 var account = Orion.SysAccountManager.Instance;
                 var saveNum = Config.saveRedirection;
-                if (account != null && saveNum >= 0 && saveNum < 4)
+                var sysSave = Orion.SysSaveManager.Instance;
+                if (sysSave is not null)
                 {
-                    var loadSavedata = account.Load(SysSaveManager.SaveDataType.Story, null, saveNum);
+                    if (account != null && saveNum >= 0 && saveNum < 4)
+                    {
+                        var loadSavedata = account.Load(SysSaveManager.SaveDataType.Story, null, saveNum);
+                        account.StartCoroutine(loadSavedata);
+                    }
+                }
+            }
+
+            public static void LoadSystemSaveFile() 
+            {
+                var account = Orion.SysAccountManager.Instance;
+                var sysSave = Orion.SysSaveManager.Instance;
+                if (sysSave is not null)
+                {
+                    var loadSavedata = account.Load(SysSaveManager.SaveDataType.Story, null, -1); //Title screen Trip etc.
                     account.StartCoroutine(loadSavedata);
+                    var settings = sysSave.LoadOption(); //everything graphic and language related
+                    sysSave.StartCoroutine(settings);
                 }
             }
         }
@@ -178,9 +198,11 @@ namespace QuickBoot
             [HarmonyPatch("Start")]
             static bool Prefix() //force the game to swap to a different scene instead of logo
             {
+      
                 Orion.AppSceneInfo.Scene sceneType = Config.GetBootType();
                 DB_TransitionsEachTimeDefine.EAnimType color = DB_TransitionsEachTimeDefine.EAnimType.FadeWhite; //set Color / Anim transition
 
+                BootHelper.LoadSystemSaveFile();
                 if (sceneType != Orion.AppSceneInfo.Scene.Title)
                 {
                     BootHelper.LoadSaveFile();
